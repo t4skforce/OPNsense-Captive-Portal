@@ -1,0 +1,238 @@
+<!doctype html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+    <meta name="robots" content="index, follow, noodp, noydir" />
+    <meta name="keywords" content="" />
+    <meta name="description" content="" />
+    <meta name="copyright" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+    <title></title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/signin.css" rel="stylesheet">
+
+    <!-- static zone info -->
+    <script type="text/javascript" src="js/zone.js"></script>
+
+    <script type="text/javascript" src="js/jquery-1.11.2.min.js"></script>
+    <script>
+        function getURLparams() {
+            var vars = [],
+                hash;
+            var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+            for (var i = 0; i < hashes.length; i++) {
+                hash = hashes[i].split('=');
+                vars.push(hash[0]);
+                vars[hash[0]] = hash[1];
+            }
+            return vars;
+        }
+
+        $(document).ready(function() {
+            /**
+             * logon action
+             */
+            $("#signin").click(function(event) {
+                event.preventDefault();
+                // hide alerts
+                $("#alertMSG").addClass("hidden");
+                // try to login
+                $.ajax({
+                    type: "POST",
+                    url: "/api/captiveportal/access/logon/" + zoneid + "/",
+                    dataType: "json",
+                    data: {
+                        user: $("#inputUsername").val(),
+                        password: $("#inputPassword").val()
+                    }
+                }).done(function(data) {
+                    // redirect on successful login
+                    if (data['clientState'] == 'AUTHORIZED') {
+                        window.open("session_popup.html", "Session Status & Logout", "width=400, height=400");
+                        if (getURLparams()['redirurl'] != undefined) {
+                            window.location = 'http://' + getURLparams()['redirurl'] + '?refresh';
+                        } else {
+                            // no target, reload page
+                            window.location.reload();
+                        }
+                    } else {
+                        $("#inputUsername").val("");
+                        $("#inputPassword").val("");
+                        $("#errorMSGtext").html("authentication failed");
+                        $("#alertMSG").removeClass("hidden");
+                    }
+                }).fail(function() {
+                    $("#errorMSGtext").html("unable to connect to authentication server");
+                    $("#alertMSG").removeClass("hidden");
+                });
+            });
+
+            /**
+             * login anonymous, only applicable when server is configured without authentication
+             */
+            $("#signin_anon").click(function(event) {
+                event.preventDefault();
+                // hide alerts
+                $("#alertMSG").addClass("hidden");
+                // try to login
+                $.ajax({
+                    type: "POST",
+                    url: "/api/captiveportal/access/logon/" + zoneid + "/",
+                    dataType: "json",
+                    data: {
+                        user: '',
+                        password: ''
+                    }
+                }).done(function(data) {
+                    // redirect on successful login
+                    if (data['clientState'] == 'AUTHORIZED') {
+
+                        if (getURLparams()['redirurl'] != undefined) {
+                            window.location = 'http://' + getURLparams()['redirurl'] + '?refresh';
+                        } else {
+                            window.location.reload();
+                        }
+                    } else {
+                        $("#inputUsername").val("");
+                        $("#inputPassword").val("");
+                        $("#errorMSGtext").html("login failed");
+                        $("#alertMSG").removeClass("hidden");
+                    }
+                }).fail(function() {
+                    $("#errorMSGtext").html("unable to connect to authentication server");
+                    $("#alertMSG").removeClass("hidden");
+                });
+            });
+
+            /**
+             * logoff action
+             */
+            $("#logoff").click(function(event) {
+                event.preventDefault();
+                // hide alerts
+                $("#alertMSG").addClass("hidden");
+                // try to login
+                $.ajax({
+                    type: "POST",
+                    url: "/api/captiveportal/access/logoff/" + zoneid + "/",
+                    dataType: "json",
+                    data: {
+                        user: '',
+                        password: ''
+                    }
+                }).done(function(data) {
+                    // refresh page
+                    window.location.reload();
+                }).fail(function() {
+                    $("#errorMSGtext").html("unable to connect to authentication server");
+                    $("#alertMSG").removeClass("hidden");
+                });
+            });
+
+            /**
+             * close / hide error message
+             */
+            $("#btnCloseError").click(function() {
+                $("#alertMSG").addClass("hidden");
+            });
+
+            /**
+             * execute after pageload
+             */
+            $.ajax({
+                type: "POST",
+                url: "/api/captiveportal/access/status/" + zoneid + "/",
+                dataType: "json",
+                data: {
+                    user: $("#inputUsername").val(),
+                    password: $("#inputPassword").val()
+                }
+            }).done(function(data) {
+                if (data['clientState'] == 'AUTHORIZED') {
+                    $("#logout_frm").removeClass('hidden');
+                } else if (data['authType'] == 'none') {
+                    $("#login_none").removeClass('hidden');
+                } else {
+                    $("#login_password").removeClass('hidden');
+                }
+            }).fail(function() {
+                $("#errorMSGtext").html("unable to connect to authentication server");
+                $("#alertMSG").removeClass("hidden");
+            });
+
+        });
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <header class="page-head">
+            <div class="row">
+                <div class="col-sm-8 col-sm-offset-2 text-center">
+                    <img class="brand-logo" src="images/default-logo.png">
+                    <h1>Welcome to the Guest Network</h1>
+                    <div class="description">By using the Guest Network you are agreeing to comply with and be bound by the following terms and conditions of use. If you disagree with any part of these terms and conditions, you may not use the Guest network.</div>
+                </div>
+            </div>
+        </header>
+        <main class="page-content">
+            <div class="row">
+                <div class="col-sm-8 col-sm-offset-2">
+                    <!-- User option 1: login needed with name and password -->
+                    <div id="login_password" class="form-box hidden">
+                        <form class="form-signin">
+                            <div class="form-signin-heading">
+                                <h3>Login to the Guest Network</h3>
+                                <p>Enter your username and password or token to log on:</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="inputUsername" class="sr-only">Username</label>
+                                <input type="text" id="inputUsername" class="form-control" placeholder="Username" required autofocus>
+                            </div>
+                            <div class="form-group">
+                                <label for="inputPassword" class="sr-only">Password</label>
+                                <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+                            </div>
+                            <button class="btn btn-primary btn-block" id="signin" type="button">Sign in</button>
+                        </form>
+                    </div>
+                    <!-- User option 2: login needed, without username, password -->
+                    <div id="login_none" class="form-box hidden">
+                        <form class="form-signin">
+                            <button class="btn btn-primary btn-block" id="signin_anon" type="button">Sign in</button>
+                        </form>
+                    </div>
+                    <!-- User option 3: Already logged in, show logout button -->
+                    <div id="logout_frm" class="form-box hidden">
+                        <form class="form-signin">
+                            <button class="btn btn-primary btn-block" id="logoff" type="button">Logout</button>
+                        </form>
+                    </div>
+                    <!-- Message dialog -->
+                    <div class="alert alert-danger alert-dismissible hidden" role="alert" id="alertMSG">
+                        <button type="button" class="close" id="btnCloseError" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <span id="errorMSGtext">Sample error message</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-8 col-sm-offset-2">
+                    <div class="single-line tos-text text-center">
+                        <strong>Terms of use:</strong>
+                        <br/> Your use of any information or materials on sites you access is entirely at your own risk, for which we shall not be liable. You agree that, though this portal, you will not perform any of the following acts: Attempt to access devices or resources to which you have no explicit, legitimate rights Copy, reproduce, or transmit any copyrighted files or information other than in accordance with the requirements and allowances of the copyright holder Launch network attacks of any kind including port scans, DoS/DDoS, packet floods, replays or injections, session hijacking or interception, or other such activity with malicious intent Transmit malicious software such as viruses, Trojan horses, and worms Surreptitiously install software or make configuration changes to any device or application, by means of the installation or execution of key loggers, registry keys, or other executable or active application or script You agree that you will use the access provided here responsibly and with full regard to the safety, security, and privacy of all other users, devices, and resources. You agree that you will be mindful of the cultural sensitivities of others while using this portal so as not to provoke reaction or offense, and that you will not intentionally access pornographic, graphically violent, hateful, or other offensive material (as deemed by us) regardless of others´ sensitivities. You understand that we reserve the right to log or monitor traffic to ensure that these terms are being followed. You understand that unauthorized use of resources through this portal may give rise to a claim for damages and/or be a criminal offense.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- bootstrap script -->
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+</body>
+
+</html>

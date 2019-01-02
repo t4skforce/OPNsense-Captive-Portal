@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+    <meta name="robots" content="index, follow, noodp, noydir" />
+    <meta name="keywords" content="" />
+    <meta name="description" content="" />
+    <meta name="copyright" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+    <title></title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/signin.css" rel="stylesheet">
+
+    <!-- static zone info -->
+    <script type="text/javascript" src="js/zone.js"></script>
+
+    <script type="text/javascript" src="js/jquery-1.11.2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            /**
+             * execute after pageload
+             */
+            var time_left = 0; // reset remaining time
+            $.ajax({
+                type: "POST",
+                url: "/api/captiveportal/access/status/" + zoneid + "/",
+                dataType: "json",
+                data: {
+                    user: $("#inputUsername").val(),
+                    password: $("#inputPassword").val()
+                }
+            }).done(function(data) {
+                if (data['acc_session_timeout'] != undefined) {
+                    time_left = parseInt(data['acc_session_timeout']);
+                    var current_time = new Date().getTime() / 1000;
+                    since_logon = (current_time - parseInt(data['startTime']));
+                    if (since_logon > 0) {
+                        time_left = time_left - since_logon; // Page has been refreshed, correct timer
+                    }
+                    updateTimeLeft();
+                    var timer = setInterval(updateTimeLeft, 60000);
+                }
+            }).fail(function() {
+                $("#errorMSGtext").html("unable to connect to authentication server");
+                $("#alertMSG").removeClass("hidden");
+            });
+
+            function updateTimeLeft() {
+                days = Math.floor(time_left / 43200);
+                hours = Math.floor((time_left - (days * 43200)) / 3600);
+                minutes = Math.floor((time_left - (days * 43200) - (hours * 3600)) / 60);
+                remaining = days.toString() + " days, " + hours.toString() + " hours, " + minutes.toString() + " minutes";
+                if (time_left >= 60) {
+                    time_left = time_left - 60;
+                }
+                $("#time_remaining").html(remaining);
+            }
+            /**
+             * logoff action
+             */
+            $("#logoff").click(function(event) {
+                event.preventDefault();
+                // hide alerts
+                $("#alertMSG").addClass("hidden");
+                // try to login
+                $.ajax({
+                    type: "POST",
+                    url: "/api/captiveportal/access/logoff/" + zoneid + "/",
+                    dataType: "json",
+                    data: {
+                        user: '',
+                        password: ''
+                    }
+                }).done(function(data) {
+                    // refresh page
+                    window.location.reload();
+                }).fail(function() {
+                    $("#errorMSGtext").html("unable to connect to authentication server");
+                    $("#alertMSG").removeClass("hidden");
+                });
+            });
+
+            /**
+             * close / hide error message
+             */
+            $("#btnCloseError").click(function() {
+                $("#alertMSG").addClass("hidden");
+            });
+
+        });
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <header class="page-head">
+            <div class="row">
+                <div class="col-sm-8 col-sm-offset-2 text-center">
+
+                    <img class="brand-logo" src="images/default-logo.png">
+                </div>
+            </div>
+        </header>
+        <main class="page-content col-sm-6 col-sm-push-3">
+            <div id="logout_frm" align="center">
+                <form class="form-signin">
+                    <h4>Time remaining on voucher:</h4>
+                    <h5><i class="glyphicon glyphicon-hourglass"></i>&nbsp;<span id="time_remaining">? days, ? hours, ? minutes</span></h5>
+                    <!-- Message dialog -->
+                    <div class="alert alert-danger alert-dismissible hidden" role="alert" id="alertMSG">
+                        <button type="button" class="close" id="btnCloseError" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <span id="errorMSGtext">Sample error message</span>
+                    </div>
+                    <button class="btn btn-primary btn-block" id="logoff" type="button">Logout</button>
+                </form>
+
+            </div>
+
+        </main>
+    </div>
+    <!-- bootstrap script -->
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+</body>
+
+</html>
